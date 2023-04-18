@@ -53,7 +53,7 @@ There is currently no way for a site to indicate that it has a custom visual tra
 
 # Proposals
 ## Choosing between UA and Custom Transition
-This API provides authors control over whether a same-document navigation performs a UA transition. The base primitive is a setting called `same-doc-ua-transition` with the following options:
+This proposal provides authors control over whether a same-document navigation performs a UA transition. The base primitive is a setting called `same-doc-ua-transition` with the following options:
 
 * `disable-atomic`: Disables UA transitions for atomic navigations.
 * `disable-swipe`: Disables UA transitions for swipe navigations.
@@ -61,13 +61,11 @@ This API provides authors control over whether a same-document navigation perfor
 The value is a space seperated list of options.
 
 ### Default Value
-The default value for this setting depends on whether UA transitions should be an opt-in or opt-out:
+The default value for this setting assumes that UA transitions should be an opt-out, i.e. the UA can do a visual transition for any navigation but sites can opt-out of them (likely in favour of a custom transition). Opt-out does have the compat issue of causing double transitions for sites which already have custom transitions. But it allows browser UX to be consistent for same-document vs cross-document navigations. This also aligns with the behaviour in Webkit based browsers which already ship with UA transitions for every swipe navigation.
 
-* Opt-out has the compat issue of causing double transitions for sites which already have custom transitions. But it allows browser UX to be consistent for same-document vs cross-document navigations. This will also be a behaviour change for Webkit based browsers which already ship this experience.
+An opt-in avoids the compat risk but conservatively disables UA transition on sites which don't have custom transitions.
 
-* Opt-in avoids the compat risk but conservatively disables UA transition on sites which don't have custom transitions.
-
-Ideally we'd want consistent behaviour across browsers here but if its not feasible, the default value can also be left to the UA.
+Note: Ideally we'd want consistent behaviour across browsers here but if its not feasible, the default value can also be left to the UA.
 
 ### Handling Swipes
 In the absence of a Gesture API for customizing swipes, authors can use this API to handle swipes in the following ways:
@@ -111,12 +109,10 @@ same-doc-ua-transition: disable-atomic;
 }
 ```
 
-This could also be done using a meta tag but specifying it in CSS allows authors to use other media queries to set this property. For example, if the value is different for mobile vs desktop screens (targeted using `min-width`).
-
-TODO: The following also need to be clarified:
+This could also be done using a meta tag but specifying it in CSS allows authors to use other media queries to set this property. For example, if the value is different for mobile vs desktop screens (targeted using `min-width`). The CSS based API will need to clarify the following details:
 
 - Define [specificty](https://developer.mozilla.org/en-US/docs/Web/CSS/Specificity) such that URL specific rules take precedence over universal rules.
-- Do we need to limit the CSS properties that can be set using these media rules? Otherwise we'll need to define the precise timing for when "to" applies. For example, if an author uses it to set `opacity`, when does the user see it? This will already be needed for `view-transition-name` but that can be defined with respect to timing of script events on the old Document.
+- Limit the CSS properties that can be set using these media rules? Otherwise we'll need to define the precise timing for when "to" applies. For example, if an author uses it to set `opacity`, when does the user see it? This will already be needed for `view-transition-name` but that can be defined with respect to timing of VT specific script events on the old Document.
 
 ## Detecting UA Transition
 For cases where the site is using `disable-atomic`, this tells the author whether a UA has already executed a visual transition. This is needed because whether there was a UA transition depends on whether the navigation was atomic or swipe.
