@@ -111,10 +111,10 @@ same-doc-ua-transition: disable-atomic;
 }
 ```
 
-TODOs:
+TODO: The following also need to be clarified:
 
-- We probably want to define [specificty](https://developer.mozilla.org/en-US/docs/Web/CSS/Specificity) such that URL specific rules take precedence over universal rules.
-- Do we need to limit the CSS properties that can be set using these media rules? Otherwise we'll need to define the precise timing for when "to" applies. For example, if an author uses it to set `opacity`. When does the user see it? This will already be needed for `view-transition-name`.
+- Define [specificty](https://developer.mozilla.org/en-US/docs/Web/CSS/Specificity) such that URL specific rules take precedence over universal rules.
+- Do we need to limit the CSS properties that can be set using these media rules? Otherwise we'll need to define the precise timing for when "to" applies. For example, if an author uses it to set `opacity`, when does the user see it? This will already be needed for `view-transition-name` but that can be defined with respect to timing of script events on the old Document.
 
 ## Detecting UA Transition
 For cases where the site is using `disable-atomic`, this tells the author whether a UA has already executed a visual transition. This is needed because whether there was a UA transition depends on whether the navigation was atomic or swipe.
@@ -137,12 +137,21 @@ navigation.addEventListener("navigate", (event) => {
 
 This proposal is also documented at [html/8782](https://github.com/whatwg/html/issues/8782). The UA transition may not necessarily finish when this event is dispatched.
 
-# Remaining Use-Cases
+# Future Use-Cases
 
 ## Cross-Document Navigations
-Clarify whether we need a similar setting to disable swipes for cross-doc nav in favour of VT when nav commits.
+Custom transitions for cross-document navigations require UA primitives. The UA can use this to detect if there are custom transitions and give them precedence over UA transitions. This avoids the need for an explicit API as described in [Choosing between UA and Custom Transition](#choosing-between-ua-and-custom-transition) for these navigations.
+
+* UA transitions for atomic navigations are suppressed if there is a ViewTransition for a navigation.
+* UA transitions for swipe navigations are suppressed if the author uses both the Gesture API + ViewTransition for a navigation. If the UA transition is executed, the ViewTransition is suppressed when the navigation commits.
+
+Question: Since ViewTransiton will likely ship before the Gesture API, are there cases where a ViewTransition when navigation commits is better than a UA default transition during swipe? This is technically similar to using `disable-swipe` for a same-doc navigation.
 
 ## Subframe Navigations
-Clarify how sub-frame navs (same or cross-doc) could depend on input from the embedding frame.
+The UA maintains a combined list of navigation entries across all nested navigables. This means back/forward navigations triggered using the browser UI can navigate the top-level navigable or a nested navigable. The following considerations apply specifically when the navigation targets a nested navigable.
+
+* Double Transitions: Cross-document navigations on same-origin nested navigables have the compat risk of double transitions, similar to same-document navigations. This is because the embedding Document can detect when a navigation starts and ends on a same-origin nested navigable and set up its own visual transition.
+
+* Sub-optimal UX: The ideal transition UX with nested navigables could depend on how the navigable is embedded. For example, a full swipe on the tab content's might not look right for a small widget. This indicates that transitions targeting nested navigables should depend on input from both the Document in the nested navigable and the embedding Document.
 
 [^1]: Note that on iOS, the touch event stream during a back/fwd swipe is dispatched to script: [example](https://scintillating-shadow-pastry.glitch.me/). But the author can not `preventDefault` to take over the gesture. This is different from Android where if the gesture results in a back swipe, the touch events are never dispatched.
