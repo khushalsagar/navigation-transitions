@@ -111,6 +111,11 @@ same-doc-ua-transition: disable-atomic;
 }
 ```
 
+TODOs:
+
+- We probably want to define [specificty](https://developer.mozilla.org/en-US/docs/Web/CSS/Specificity) such that URL specific rules take precedence over universal rules.
+- Do we need to limit the CSS properties that can be set using these media rules? Otherwise we'll need to define the precise timing for when "to" applies. For example, if an author uses it to set `opacity`. When does the user see it? This will already be needed for `view-transition-name`.
+
 ## Detecting UA Transition
 For cases where the site is using `disable-atomic`, this tells the author whether a UA has already executed a visual transition. This is needed because whether there was a UA transition depends on whether the navigation was atomic or swipe.
 
@@ -132,11 +137,12 @@ navigation.addEventListener("navigate", (event) => {
 
 This proposal is also documented at [html/8782](https://github.com/whatwg/html/issues/8782). The UA transition may not necessarily finish when this event is dispatched.
 
-[^1]: Note that on iOS, the touch event stream during a back/fwd swipe is dispatched to script: [example](https://scintillating-shadow-pastry.glitch.me/). But the author can not `preventDefault` to take over the gesture. This is different from Android where if the gesture results in a back swipe, the touch events are never dispatched.
-
 # Remaining Use-Cases
+
 ## Cross-Document Navigations
-TODO
+Clarify whether we need a similar setting to disable swipes for cross-doc nav in favour of VT when nav commits.
 
 ## Subframe Navigations
-TODO
+Clarify how sub-frame navs (same or cross-doc) could depend on input from the embedding frame.
+
+[^1]: Note that on iOS, the touch event stream during a back/fwd swipe is dispatched to script: [example](https://scintillating-shadow-pastry.glitch.me/). But the author can not `preventDefault` to take over the gesture. This is different from Android where if the gesture results in a back swipe, the touch events are never dispatched.
