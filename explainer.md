@@ -84,35 +84,87 @@ The author could simply update the value of the global setting based on what's i
 * Browser UI allows the user to traverse multiple entries, so back/fwd can jump to any entry in the navigation history.
 * The user navigates to a new URL by pasting in the URL bar.
 
-The proposal is to specify this using pair of URLs, which are the source/destination URLs for the navigation. The destination URL must be the value before redirects. This is because the setting is applied when the swipe gesture starts, before the navigation is initiated (which will resolve redirects).
+The proposal is to specify this using pair of URLs, which are the source/destination URLs for the navigation. This would effectively be a list of dictionaries which is 1:1 with a Document as follows:
+
+```
+[{
+   from: urlPattern("/articles/*");
+   to: urlPattern("/index");
+   same-doc-ua-transition: disable-swipe disable-atomic;
+ },
+ {
+   same-doc-ua-transition: disable-atomic;
+ }
+```
+
+Specifying the URL builds on the existing [URLPattern](https://wicg.github.io/urlpattern/) concept. Similar to the [specificty](https://developer.mozilla.org/en-US/docs/Web/CSS/Specificity) concept in CSS, the list value applied should be chosen based on how narrowly scoped the rule is to a navigation. TODO: Clarify the exact algorithm for this.
+
+The destination URL must be the value before redirects. This is because the setting is applied when the swipe gesture starts, before the navigation is initiated (which will resolve redirects).
 
 ### CSS API
-The precise API builds on top of media queries to add a concept of source/destination URLs to CSS.
+The following options are for a CSS based syntax for this API. The current proposal is [Option 1](#option-1).
+
+#### Option 1
+A new CSS [at-rule](https://developer.mozilla.org/en-US/docs/Web/CSS/At-rule) as described below:
 
 ```css
 /* Applies to all same-document navigations from this Document */
-same-doc-ua-transition: disable-atomic;
+@ua-transition {
+  same-doc-ua-transition: disable-atomic;
+}
+
+/* Applies to same-document navigations from the current Document if the destination URL matches "to" */
+@ua-transition {
+  to: urlPattern("/index");
+  same-doc-ua-transition: disable-atomic;
+}
+
+/* Applies to same-document navigations from the current Document if the current URL matches "from".
+   This avoids the need to use script to change rules based on what the current URL is. */
+@ua-transition {
+  from: urlPattern("/articles/*");
+  same-doc-ua-transition: disable-atomic;
+}
+
+/* Applies to same-document navigations from the current Document if the current URL matches "from"
+   and the destination URL matches to. */
+@ua-transition {
+  from: urlPattern("/articles/*");
+  to: urlPattern("/index");
+  same-doc-ua-transition: disable-atomic disable-swipe;
+}
+```
+
+The `from` and `to` keywords specify the origin and destination URL for a navigation. `same-doc-ua-transition` specifies the value which applies to the navigation.
+
+#### Option 2
+A new generic media query to apply rules based on the from/to URL:
+
+```css
+/* Applies to same-document navigations from this Document */
+@same-doc-ua-transition disable-atomic;
 
 /* Applies to same-document navigations from the current Document if the destination URL matches "to" */
 @media (to: urlPattern("/articles/*")) {
   same-doc-ua-transition: disable-atomic disable-swipe;
 }
 
-/* Applies to all same-document navigations from the current Document if the current URL matches "from".
-   This is syntactic sugar to avoid having to change rules based on what the current URL is. */
+/* Applies to same-document navigations from the current Document if the current URL matches "from".
+   This avoids the need to use script to change rules based on what the current URL is. */
 @media (from: urlPattern("/articles/*")) {
   same-doc-ua-transition: disable-atomic disable-swipe;
 }
 
+/* Applies to same-document navigations from the current Document if the current URL matches "from"
+   and the destination URL matches to. */
 @media (from: urlPattern("/articles/*")) and (to: urlPattern("/index")) {
   same-doc-ua-transition: disable-atomic disable-swipe;
 }
 ```
 
-This could also be done using a meta tag but specifying it in CSS allows authors to use other media queries to set this property. For example, if the value is different for mobile vs desktop screens (targeted using `min-width`). The CSS based API will need to clarify the following details:
+This media query is useful if we expect other use-cases for rules which should be conditionally applied based on navigation state. But the downside is that we'll need to precisely define the timing for when the "to" media query applies. This is important since a generic query will allow setting any CSS property which affects the rendered state of the current Document.
 
-- Define [specificty](https://developer.mozilla.org/en-US/docs/Web/CSS/Specificity) such that URL specific rules take precedence over universal rules.
-- Limit the CSS properties that can be set using these media rules? Otherwise we'll need to define the precise timing for when "to" applies. For example, if an author uses it to set `opacity`, when does the user see it? This will already be needed for `view-transition-name` but that can be defined with respect to timing of VT specific script events on the old Document.
+Since the pattern in option 1 is limited to UA transitions, the timing for the rule can be specific to that feature.
 
 ## Detecting UA Transition
 For cases where the site is using `disable-atomic`, this tells the author whether a UA has already executed a visual transition. This is needed because whether there was a UA transition depends on whether the navigation was atomic or swipe.
