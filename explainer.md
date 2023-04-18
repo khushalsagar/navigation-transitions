@@ -111,6 +111,8 @@ same-doc-ua-transition: disable-atomic;
 }
 ```
 
+This could also be done using a meta tag but specifying it in CSS allows authors to use other media queries to set this property. For example, if the value is different for mobile vs desktop screens (targeted using `min-width`).
+
 TODO: The following also need to be clarified:
 
 - Define [specificty](https://developer.mozilla.org/en-US/docs/Web/CSS/Specificity) such that URL specific rules take precedence over universal rules.
