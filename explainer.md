@@ -1,10 +1,10 @@
 # Introduction
 Smooth visual transitions as users navigate on the web can lower cognitive load by helping users stay in context. It can also provide a [visual cue](https://www.wired.com/2014/04/swipe-safari-ios-7/) about the destination before initiating the navigation. Both site authors and user-agents (UAs) add visual transitions to their navigations for these use-cases.
 
-However, the user experience is bad if [both the site author and the UA](https://stackoverflow.com/questions/19662434/in-ios-7-safari-how-do-you-differentiate-popstate-events-via-edge-swipe-vs-the) add these transitions. The goal of this proposal is to avoid such cases to ensure only one visual transition is executed at a time.
+However, the user experience is bad if [both the site author and the UA](https://stackoverflow.com/questions/19662434/in-ios-7-safari-how-do-you-differentiate-popstate-events-via-edge-swipe-vs-the) add these transitions: the transitions may conflict and cause confusion for the user. The goal of this proposal is to avoid such cases to ensure only one visual transition is executed at a time.
 
 The ethos guiding the API design are:
-* If a visual transition can be defined by both the site author and the UA, the site author takes precendence.
+* If a visual transition can be defined by both the site author and the UA, the site author takes precendence since they have a better understanding of the design and functionality of their site.
 
 * If site authors can not define the transition, they should be able to detect if a visual transition was executed by the UA (assuming no security/privacy concerns).
 
@@ -30,14 +30,14 @@ The table below shows the current state for the cross-section of these cases:
 
 The platform APIs required for cases marked with ☑ are:
 
-* Gesture API: Most platforms have a swipe gesture which is used by the UA to trigger a back/forward navigation. On Android/iOS its swiping from the screen edge; on Mac, its multi-finger swipe. Site authors currently can not consistently intercept these events. Customizing swipe navigations for both same-document and cross-document navigations requires this[^1].
+* Gesture API: Most platforms have a swipe gesture which is used by the UA to trigger a back/forward navigation. On Android/iOS the gesture is swiping from the screen edge; on Mac, it's a multi-finger swipe. Site authors currently can not consistently intercept these events. Customizing swipe navigations for both same-document and cross-document navigations requires this[^1].
 
 * Persisting Visual State: The transition requires showing visual state from both before/after the navigation. Site authors can do this for same-document navigations but not cross-document. [ViewTransition](https://github.com/WICG/view-transitions/blob/main/explainer.md#cross-document-same-origin-transitions) addresses this gap.
 
-The exact details for the above APIs is out of scope for this proposal. These are meant to show that there are cases which are currently not customizable by site authors but will be going forward. The API proposals here should work well if/when one of these cases becomes customizable.
+The details for the above APIs are out of scope for this proposal. These are meant to show that there are cases which are currently not customizable by site authors but may become so going forward. The API proposal here should work well if/when one of these cases becomes customizable.
 
 # Problem Statement
-There is currently no way for a site to indicate that it has a custom visual transition tied to a navigation. For example, if the UA adds a visual transition for an atomic navigation (like clicking the back button), there is no way for the UA and site-author to coordinate the 2 transitions. The results in 2 category of issues:
+There is currently no way for a site author to indicate that the page has a custom visual transition tied to a navigation. For example, if the UA adds a visual transition for an atomic navigation (like clicking the back button), there is no way for the UA and site-author to coordinate the 2 transitions. The results in 2 category of issues:
 
 * Double transitions: Executing both the UA and author defined visual transitions looks like a visual glitch. This [site](https://darkened-relieved-azimuth.glitch.me) shows the issue on Chrome/Safari iOS and Safari on Mac. The site does a cross-fade when the user goes back:
 
@@ -45,25 +45,27 @@ There is currently no way for a site to indicate that it has a custom visual tra
 
    * If the user navigates using a swipe from the edge (iOS) or 2 finger swipe (mac), the UA does a transition showing content of the back entry. The Document then receives a `popState` event for the navigation and performs another visual transition.
    
-   This has *compat risk* if the UA adds visual transitions for navigations which can be implicitly customized by the site author, i.e., same-document navigations. This is not a problem for cross-document navigations since customization requires UA primitives like ViewTransitions. The UA can use this to detect if there are custom transitions and give them precedence.
+   This has *compat risk* if the UA adds visual transitions for navigations which can be implicitly customized by the site author, i.e., same-document navigations. This is not a problem for cross-document navigations since customization requires UA primitives like [ViewTransitions](https://drafts.csswg.org/css-view-transitions-1/). The UA can use this to detect if there are custom transitions and give them precedence.
    
-* Sub-optimal UX: It's possible that the transition UX defined by the UA is not ideal given the DOM change associated with a navigation. For example, scrolling to a different position in the same Document.
+* Sub-optimal user experience (UX): It's possible that the transition UX defined by the UA is not ideal given the DOM change associated with a navigation (e.g. scrolling to a different position in the same Document).
 
    This can be resolved by giving precedence to author defined transitions over UA transitions if the case is customizable. For cases which can't be customized yet (like swipe navigations), it's unclear whether no visual transition is better than the UA default.
 
 # Proposals
 ## Choosing between UA and Custom Transition
-This proposal provides authors control over whether a same-document navigation performs a UA transition. The base primitive is a setting called `same-doc-ua-transition` with the following options:
+This proposal provides authors control over whether a same-document navigation performs a UA transition. The base primitive is a setting called `same-document-ua-transition` with the following options:
 
 * `disable-atomic`: Disables UA transitions for atomic navigations.
 * `disable-swipe`: Disables UA transitions for swipe navigations.
 
-The value is a space seperated list of options.
+The value can take on any number of options (none, one, or both).
 
 ### Default Value
-The default value for this setting assumes that UA transitions should be an opt-out, i.e. the UA can do a visual transition for any navigation but sites can opt-out of them (likely in favour of a custom transition). Opt-out does have the compat issue of causing double transitions for sites which already have custom transitions. But it allows browser UX to be consistent for same-document vs cross-document navigations. This also aligns with the behaviour in Webkit based browsers which already ship with UA transitions for every swipe navigation.
+The default value for this setting assumes that UA transitions is an opt-out. In other words, the UA can do a visual transition for any navigation but site authors can opt pages out of them, likely in favour of a custom transition.
 
-An opt-in avoids the compat risk but conservatively disables UA transition on sites which don't have custom transitions.
+Opt-out does come with the compat risk of causing double transitions for sites which already have custom transitions. However, it allows browser UX to be consistent for same-document vs cross-document navigations. This also aligns with the behaviour in WebKit based browsers which already ship with UA transitions for swipe navigations.
+
+An opt-in avoids this compat risk but conservatively disables UA transition on sites which don't have custom transitions.
 
 Note: Ideally we'd want consistent behaviour across browsers here but if its not feasible, the default value can also be left to the UA.
 
@@ -71,17 +73,19 @@ Note: Ideally we'd want consistent behaviour across browsers here but if its not
 In the absence of a Gesture API for customizing swipes, authors can use this API to handle swipes in the following ways:
 
 1. Add `disable-swipe` which means no visual transition occurs during the gesture. The site instead does a visual transition when the navigation commits (using the `popState` or `navigate` event). This could be sub-optimal for users since they can't use the previous page's preview to decide whether the navigation should occur.
-   However, it's unlikely that authors will do this unless a custom transition when the navigation commits is strictly better than the default UA transition.
+   However, this is an intentional author request, meaning it's likely the page has a custom transition when the navigation commits and it is more desirable than the UA default.
 
-2. Omit `disable-swipe` which allows the UA to do a visual transition during the gesture. The author can detect this using the API described in [Detecting UA Transition](#detecting-ua-transition).
+2. Omit `disable-swipe` which allows the UA to do a visual transition during the gesture. The author can detect the transition using the API described in [Detecting UA Transition](#detecting-ua-transition).
 
 ### Global vs Navigation Based
-`same-doc-ua-transition` could be a global setting that applies to all same-document navigations originating from the current Document, or configured based on the source/destination URL. This depends on whether authors have custom transitions for a subset of navigations, or whether the behavior for swipes is set different based on the destination page.
+The choice of whether to make `same-document-ua-transition` a global setting that applies to all same-document navigations originating from the current Document, or be configured based on the source/destination URL is also important.
 
-The author could simply update the value of the global setting based on what's in the navigation history, but the following cases are still infeasible:
+The decision depends on whether authors tend to have custom transitions for a subset of navigations, or whether the behavior for swipes is typically different based on the destination page.
+
+The author could, of course, update the value of the global setting based on what's in the navigation history, but the following cases would still remain infeasible:
 
 * The setting needs to be different for the back and forward entries.
-* Browser UI allows the user to traverse multiple entries, so back/fwd can jump to any entry in the navigation history.
+* Browser UI allows the user to traverse multiple entries, so back/forward can jump to any entry in the navigation history.
 * The user navigates to a new URL by pasting in the URL bar.
 
 The proposal is to specify this using pair of URLs, which are the source/destination URLs for the navigation. This would effectively be a list of dictionaries which is 1:1 with a Document as follows:
@@ -94,7 +98,7 @@ The proposal is to specify this using pair of URLs, which are the source/destina
  },
  {
    same-doc-ua-transition: disable-atomic;
- }
+ }]
 ```
 
 Specifying the URL builds on the existing [URLPattern](https://wicg.github.io/urlpattern/) concept. Similar to the [specificty](https://developer.mozilla.org/en-US/docs/Web/CSS/Specificity) concept in CSS, the list value applied should be chosen based on how narrowly scoped the rule is to a navigation. TODO: Clarify the exact algorithm for this.
