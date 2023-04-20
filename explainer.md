@@ -92,10 +92,10 @@ The author could specify this using a pair of URLs, which are the source/destina
 [{
    from: urlPattern("/articles/*");
    to: urlPattern("/index");
-   same-doc-ua-transition: disable-swipe disable-atomic;
+   same-document-ua-transition: disable-swipe disable-atomic;
  },
  {
-   same-doc-ua-transition: disable-atomic;
+   same-document-ua-transition: disable-atomic;
  }]
 ```
 
