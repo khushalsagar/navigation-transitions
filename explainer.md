@@ -1,5 +1,5 @@
 # Introduction
-Smooth visual transitions as users navigate on the web can lower cognitive load by helping users stay in context. It can also provide a [visual cue](https://www.wired.com/2014/04/swipe-safari-ios-7/) about the destination before initiating the navigation. Both site authors and UAs add visual transitions to their navigations for these use-cases.
+Smooth visual transitions as users navigate on the web can lower cognitive load by helping users stay in context. It can also provide a [visual cue](https://www.wired.com/2014/04/swipe-safari-ios-7/) about the destination before initiating the navigation. Both site authors and user-agents (UAs) add visual transitions to their navigations for these use-cases.
 
 However, the user experience is bad if [both the site author and the UA](https://stackoverflow.com/questions/19662434/in-ios-7-safari-how-do-you-differentiate-popstate-events-via-edge-swipe-vs-the) add these transitions. The goal of this proposal is to avoid such cases to ensure only one visual transition is executed at a time.
 
